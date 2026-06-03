@@ -1,6 +1,7 @@
 package room
 
 import (
+	"log"
 	"sync"
 
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ func (m *Manager) Create() *Room {
 	m.mu.Lock()
 	m.rooms[id] = r
 	m.mu.Unlock()
+	log.Printf("[room] %s created", id)
 	return r
 }
 
@@ -29,4 +31,11 @@ func (m *Manager) Get(id string) (*Room, bool) {
 	defer m.mu.RUnlock()
 	r, ok := m.rooms[id]
 	return r, ok
+}
+
+func (m *Manager) Delete(id string) {
+	m.mu.Lock()
+	delete(m.rooms, id)
+	m.mu.Unlock()
+	log.Printf("[room] %s deleted", id)
 }

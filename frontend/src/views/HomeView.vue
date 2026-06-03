@@ -9,6 +9,7 @@
     </div>
 
     <div class="card">
+      <input v-model="nickname" placeholder="Nickname">
       <input v-model="joinId" placeholder="Room ID" maxlength="8" />
       <button :disabled="!joinId" @click="joinRoom">Join</button>
     </div>
@@ -26,6 +27,8 @@ const joinId = ref('')
 const loading = ref(false)
 const error = ref('')
 
+const nickname = ref('')
+
 async function createRoom() {
   loading.value = true
   error.value = ''
@@ -33,7 +36,7 @@ async function createRoom() {
     const res = await fetch('/api/rooms', { method: 'POST' })
     if (!res.ok) throw new Error('Server error')
     const { roomId } = await res.json()
-    router.push(`/room/${roomId}`)
+    router.push(`/room/${roomId}?nickname=${encodeURIComponent(nickname.value)}`)
   } catch (e) {
     error.value = e.message
   } finally {
@@ -48,7 +51,7 @@ async function joinRoom() {
     error.value = 'Room not found'
     return
   }
-  router.push(`/room/${joinId.value}`)
+  router.push(`/room/${joinId.value}?nickname=${encodeURIComponent(nickname.value)}`)
 }
 </script>
 

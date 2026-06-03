@@ -14,7 +14,7 @@ func main() {
 	cfg := config.Load()
 
 	manager := room.NewManager()
-	hub := ws.NewHub()
+	hub := ws.NewHub(manager)
 
 	router := apphttp.NewRouter(manager, hub, cfg.AllowedOrigin)
 

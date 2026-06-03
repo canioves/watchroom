@@ -3,17 +3,19 @@ package room
 import "github.com/gorilla/websocket"
 
 type Client struct {
-	ID     string
-	RoomID string
-	Conn   *websocket.Conn
-	Send   chan []byte
+	ID       string
+	Nickname string
+	RoomID   string
+	Conn     *websocket.Conn
+	Send     chan []byte
 }
 
-func NewClient(id, roomID string, conn *websocket.Conn) *Client {
+func NewClient(id, nickname, roomID string, conn *websocket.Conn) *Client {
 	return &Client{
-		ID:     id,
-		RoomID: roomID,
-		Conn:   conn,
-		Send:   make(chan []byte, 64),
+		ID:       id,
+		Nickname: nickname,
+		RoomID:   roomID,
+		Conn:     conn,
+		Send:     make(chan []byte, 64),
 	}
 }

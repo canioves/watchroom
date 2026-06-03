@@ -24,10 +24,6 @@ export function usePlayerSync(playerRef, send) {
       playerRef.value.play();
     }
     if (msg.type === "pause") playerRef.value.pause();
-    if (msg.type === "load") {
-      isRemoteUpdate.value = true;
-      playerRef.value.loadVideoById(msg.videoId);
-    }
   }
   return { onPlayerPlay, onPlayerPause, applyMessage };
 }

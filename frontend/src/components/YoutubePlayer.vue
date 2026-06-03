@@ -1,5 +1,7 @@
 <template>
-  <div id="yt-player"></div>
+  <div class="player-wrap">
+    <div id="yt-player"></div>
+  </div>
 </template>
 
 <script setup>
@@ -63,13 +65,31 @@ onMounted(() => {
   if (window.YT?.Player) {
     initPlayer();
   } else {
-    window.onYouTubeIframeAPIReady = initPlayer;
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      initPlayer();
+    };
   }
 });
 
 onUnmounted(() => {
   player?.destroy();
+  player = null;
 });
 
 defineExpose({ play, pause, seekTo, getCurrentTime, loadVideoById });
 </script>
+
+<style scoped>
+.player-wrap {
+  width: 100%;
+  height: 100%;
+}
+.player-wrap :deep(iframe),
+#yt-player {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+</style>

@@ -40,6 +40,10 @@ func NewHandler(hub *Hub, manager *room.Manager, allowedOrigin string) *Handler 
 
 func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	roomID := mux.Vars(r)["roomID"]
+	nickname := r.URL.Query().Get("nickname")
+	if nickname == "" {
+		nickname = "anon"
+	}
 	rm, ok := h.manager.Get(roomID)
 	if !ok {
 		http.Error(w, "room not found", http.StatusNotFound)
@@ -53,7 +57,8 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clientID := uuid.NewString()[:8]
-	client := room.NewClient(clientID, roomID, conn)
+	client := room.NewClient(clientID, nickname, roomID, conn)
+	existing := h.hub.Participants(roomID)
 	h.hub.Register(client)
 
 	// send current state to the new participant
@@ -67,12 +72,19 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 		VideoID:   state.VideoID,
 		Position:  state.Position,
 		IsPlaying: state.IsPlaying,
+		Nickname:  nickname,
 		UserID:    clientID,
 	})
+
 	client.Send <- syncMsg
 
+	for _, p := range existing {
+		msg, _ := json.Marshal(p)
+		client.Send <- msg
+	}
+
 	// broadcast join to others
-	joinMsg, _ := json.Marshal(Message{Type: UserJoin, UserID: clientID})
+	joinMsg, _ := json.Marshal(Message{Type: UserJoin, UserID: clientID, Nickname: nickname})
 	h.hub.Broadcast(roomID, joinMsg, client)
 
 	go h.writePump(client)
@@ -81,7 +93,7 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 	defer func() {
-		leaveMsg, _ := json.Marshal(Message{Type: UserLeave, UserID: c.ID})
+		leaveMsg, _ := json.Marshal(Message{Type: UserLeave, UserID: c.ID, Nickname: c.Nickname})
 		h.hub.Broadcast(c.RoomID, leaveMsg, c)
 		h.hub.Unregister(c)
 		c.Conn.Close()
@@ -98,28 +110,28 @@ func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 		_, raw, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("[ws] read error user=%s: %v", c.ID, err)
+				log.Printf("[ws] read error user=%s: %v", c.Nickname, err)
 			}
 			return
 		}
 
 		var msg Message
 		if err := json.Unmarshal(raw, &msg); err != nil {
-			log.Printf("[ws] bad message from %s: %v", c.ID, err)
+			log.Printf("[ws] bad message from %s: %v", c.Nickname, err)
 			continue
 		}
 		msg.UserID = c.ID
 		switch msg.Type {
 		case PlayerPlay:
 			rm.SetState(room.State{
-				VideoID:   msg.VideoID,
+				VideoID:   rm.GetState().VideoID,
 				Position:  msg.Position,
 				IsPlaying: true,
 				UpdatedAt: time.Now().UnixMilli(),
 			})
 		case PlayerPause:
 			rm.SetState(room.State{
-				VideoID:   msg.VideoID,
+				VideoID:   rm.GetState().VideoID,
 				Position:  msg.Position,
 				IsPlaying: false,
 				UpdatedAt: time.Now().UnixMilli(),
@@ -133,7 +145,7 @@ func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 			})
 		}
 
-		log.Printf("[msg] type=%s user=%s room=%s", msg.Type, c.ID, c.RoomID)
+		log.Printf("[msg] type=%s user=%s room=%s", msg.Type, c.Nickname, c.RoomID)
 
 		out, _ := json.Marshal(msg)
 		h.hub.Broadcast(c.RoomID, out, c)

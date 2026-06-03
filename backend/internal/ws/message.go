@@ -18,5 +18,6 @@ type Message struct {
 	Position  float64     `json:"position,omitempty"`
 	SentAt    int64       `json:"sentAt,omitempty"`
 	UserID    string      `json:"userId,omitempty"`
+	Nickname  string      `json:"nickname,omitempty"`
 	IsPlaying bool        `json:"isPlaying,omitempty"`
 }
