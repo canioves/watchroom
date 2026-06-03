@@ -13,9 +13,10 @@ const (
 )
 
 type Message struct {
-	Type     MessageType `json:"type"`
-	VideoID  string      `json:"videoId,omitempty"`
-	Position float64     `json:"position,omitempty"`
-	SentAt   int64       `json:"sentAt,omitempty"`
-	UserID   string      `json:"userId,omitempty"`
+	Type      MessageType `json:"type"`
+	VideoID   string      `json:"videoId,omitempty"`
+	Position  float64     `json:"position,omitempty"`
+	SentAt    int64       `json:"sentAt,omitempty"`
+	UserID    string      `json:"userId,omitempty"`
+	IsPlaying bool        `json:"isPlaying,omitempty"`
 }

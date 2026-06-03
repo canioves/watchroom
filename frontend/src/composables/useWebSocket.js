@@ -26,6 +26,7 @@ export function useWebSocket(roomId, onMessage) {
 
   function send(msg) {
     if (ws?.readyState === WebSocket.OPEN) {
+      console.log(msg)
       ws.send(JSON.stringify(msg))
     }
   }

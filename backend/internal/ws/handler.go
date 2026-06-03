@@ -20,8 +20,8 @@ const (
 )
 
 type Handler struct {
-	hub     *Hub
-	manager *room.Manager
+	hub      *Hub
+	manager  *room.Manager
 	upgrader websocket.Upgrader
 }
 
@@ -58,11 +58,16 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	// send current state to the new participant
 	state := rm.GetState()
+	if state.IsPlaying {
+		elapsed := float64(time.Now().UnixMilli()-state.UpdatedAt) / 1000
+		state.Position += elapsed
+	}
 	syncMsg, _ := json.Marshal(Message{
-		Type:     StateSync,
-		VideoID:  state.VideoID,
-		Position: state.Position,
-		UserID:   clientID,
+		Type:      StateSync,
+		VideoID:   state.VideoID,
+		Position:  state.Position,
+		IsPlaying: state.IsPlaying,
+		UserID:    clientID,
 	})
 	client.Send <- syncMsg
 
@@ -71,10 +76,10 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	h.hub.Broadcast(roomID, joinMsg, client)
 
 	go h.writePump(client)
-	h.readPump(client)
+	h.readPump(client, rm)
 }
 
-func (h *Handler) readPump(c *room.Client) {
+func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 	defer func() {
 		leaveMsg, _ := json.Marshal(Message{Type: UserLeave, UserID: c.ID})
 		h.hub.Broadcast(c.RoomID, leaveMsg, c)
@@ -104,8 +109,30 @@ func (h *Handler) readPump(c *room.Client) {
 			continue
 		}
 		msg.UserID = c.ID
+		switch msg.Type {
+		case PlayerPlay:
+			rm.SetState(room.State{
+				VideoID:   msg.VideoID,
+				Position:  msg.Position,
+				IsPlaying: true,
+				UpdatedAt: time.Now().UnixMilli(),
+			})
+		case PlayerPause:
+			rm.SetState(room.State{
+				VideoID:   msg.VideoID,
+				Position:  msg.Position,
+				IsPlaying: false,
+				UpdatedAt: time.Now().UnixMilli(),
+			})
+		case VideoLoad:
+			rm.SetState(room.State{
+				VideoID:   msg.VideoID,
+				Position:  0,
+				IsPlaying: true,
+				UpdatedAt: time.Now().UnixMilli(),
+			})
+		}
 
-		// Stage 1: just log and echo to others; sync logic comes in stage 4
 		log.Printf("[msg] type=%s user=%s room=%s", msg.Type, c.ID, c.RoomID)
 
 		out, _ := json.Marshal(msg)
