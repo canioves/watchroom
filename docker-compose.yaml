@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      PORT: 8080
+      ALLOWED_ORIGIN: http://your-vps-ip
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
