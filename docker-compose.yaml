@@ -3,11 +3,14 @@ services:
     build: ./backend
     environment:
       PORT: 8080
-      ALLOWED_ORIGIN: canioves.ru
+      ALLOWED_ORIGIN: https://canioves.ru
 
   frontend:
     build: ./frontend
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/ssl/cloudflare:/etc/ssl/cloudflare:ro
     depends_on:
       - backend
