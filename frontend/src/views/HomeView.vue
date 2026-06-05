@@ -88,4 +88,22 @@ button {
 }
 button:disabled { opacity: 0.5; cursor: default; }
 .error { color: #fc8181; }
+
+@media (max-width: 640px) {
+  .home {
+    padding: 60px 16px 0;
+  }
+  .card {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+  }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  button {
+    width: 100%;
+  }
+}
 </style>

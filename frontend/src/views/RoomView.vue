@@ -249,4 +249,42 @@ header {
   font-size: 0.8rem;
   color: #6ee7b7;
 }
+
+@media (max-width: 640px) {
+  .room {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    height: auto;
+    min-height: 100dvh;
+    padding: 12px;
+    gap: 10px;
+  }
+  header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .load-form {
+    margin-left: 0;
+    width: 100%;
+  }
+  .load-form input {
+    flex: 1;
+    width: auto;
+  }
+  .player-area {
+    aspect-ratio: 16 / 9;
+    min-height: unset;
+  }
+  .participants {
+    max-height: 100px;
+  }
+  .participants ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+  .log {
+    max-height: 80px;
+  }
+}
 </style>
