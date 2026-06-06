@@ -173,6 +173,7 @@ function loadVideo() {
     currentVideoId.value = id;
     send({ type: "load", videoId: id });
   }
+  videoInput.value = "";
 }
 
 function submitChat() {
