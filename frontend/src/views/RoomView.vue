@@ -188,10 +188,9 @@ function submitChat() {
 
 function addToQueue() {
   const id = parseVideoId(videoInput.value);
-  queue.value.push({id: id})
+  queue.value.push({ id });
   send({ type: "queue_add", videoId: id });
   videoInput.value = "";
-  console.log(queue.value)
 }
 
 function onPlayerEnded() {

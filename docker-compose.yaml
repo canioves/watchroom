@@ -3,7 +3,7 @@ services:
     build: ./backend
     environment:
       PORT: 8080
-      ALLOWED_ORIGIN: https://canioves.ru
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
 
   frontend:
     build: ./frontend
