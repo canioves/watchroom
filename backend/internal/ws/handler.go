@@ -143,6 +143,13 @@ func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 				IsPlaying: true,
 				UpdatedAt: time.Now().UnixMilli(),
 			})
+		case PlayerSeek:
+			rm.SetState(room.State{
+				VideoID:   rm.GetState().VideoID,
+				Position:  msg.Position,
+				IsPlaying: false,
+				UpdatedAt: time.Now().UnixMilli(),
+			})
 		case MessageChat:
 			msg.Nickname = c.Nickname
 		}

@@ -11,6 +11,7 @@
       <div class="load-form">
         <input v-model="videoInput" placeholder="YouTube URL or ID" @keydown.enter="loadVideo" />
         <button @click="loadVideo">Load</button>
+        <button class="queue-btn" @click="addToQueue" title="Add to queue">+</button>
       </div>
     </header>
 
@@ -24,9 +25,19 @@
         :auto-play="autoPlay"
         @play="onPlayerPlay"
         @pause="onPlayerPause"
+        @seek="onPlayerSeek"
+        @ended="onPlayerEnded"
       />
     </div>
-
+    <div class="queue-area" v-if="queue.length">
+      <button class="queue-skip" @click="skipNext">Next</button>
+      <div class="queue-list">
+        <div v-for="(item, i) in queue" :key="item.id + i" class="queue-item">
+          <img :src="`https://img.youtube.com/vi/${item.id}/mqdefault.jpg`" alt="" />
+          <span class="queue-num">{{ i + 1 }}</span>
+        </div>
+      </div>
+    </div>
     <aside class="sidebar">
       <div class="participants">
         <h3>Participants ({{ participants.length }})</h3>
@@ -83,6 +94,8 @@ const messages = ref([]);
 const chatInput = ref("");
 const chatEl = useTemplateRef("chatEl");
 
+const queue = ref([]);
+
 const copied = ref(false);
 function copyLink() {
   navigator.clipboard.writeText(roomId);
@@ -118,7 +131,18 @@ const { status, connect, disconnect, send } = useWebSocket(
       currentVideoId.value = data.videoId;
     } else if (data.type === "chat") {
       messages.value.push({ id: Date.now(), nickname: data.nickname, text: data.text });
-      nextTick(() => { if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight; });
+      nextTick(() => {
+        if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight;
+      });
+    } else if (data.type === "queue_add") {
+      queue.value.push({ id: data.videoId });
+    } else if (data.type === "queue_advance") {
+      if (currentVideoId.value !== data.videoId) {
+        queue.value.shift();
+        autoPlay.value = true;
+        startPosition.value = 0;
+        currentVideoId.value = data.videoId;
+      }
     } else if (["play", "pause", "seek"].includes(data.type)) {
       applyMessage(data);
     }
@@ -129,7 +153,7 @@ const { status, connect, disconnect, send } = useWebSocket(
   },
 );
 
-const { onPlayerPlay, onPlayerPause, applyMessage } = usePlayerSync(player, send);
+const { onPlayerPlay, onPlayerPause, onPlayerSeek, applyMessage } = usePlayerSync(player, send);
 
 function parseVideoId(input) {
   try {
@@ -155,9 +179,34 @@ function submitChat() {
   const text = chatInput.value.trim();
   if (!text) return;
   messages.value.push({ id: Date.now(), nickname, text });
-  nextTick(() => { if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight; });
+  nextTick(() => {
+    if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight;
+  });
   send({ type: "chat", text });
   chatInput.value = "";
+}
+
+function addToQueue() {
+  const id = parseVideoId(videoInput.value);
+  queue.value.push({id: id})
+  send({ type: "queue_add", videoId: id });
+  videoInput.value = "";
+  console.log(queue.value)
+}
+
+function onPlayerEnded() {
+  if (queue.value.length) skipNext();
+}
+
+function skipNext() {
+  if (!queue.value.length) return;
+  const next = queue.value[0].id;
+  send({ type: "queue_advance", videoId: next });
+  send({ type: "load", videoId: next });
+  queue.value.shift();
+  autoPlay.value = true;
+  startPosition.value = 0;
+  currentVideoId.value = next;
 }
 
 onMounted(connect);
@@ -167,7 +216,7 @@ onUnmounted(disconnect);
 <style scoped>
 .room {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   grid-template-columns: 1fr 220px;
   gap: 16px;
   padding: 16px;
@@ -237,11 +286,74 @@ header {
   font-size: 0.9rem;
   cursor: pointer;
 }
+.queue-btn {
+  background: #2d2d2d !important;
+  border: 1px solid #444 !important;
+  color: #ccc !important;
+  font-size: 1.1rem !important;
+  padding: 6px 12px !important;
+}
+.queue-btn:hover { background: #3a3a3a !important; }
 .player-area {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
   min-height: 0;
+  grid-row: 2;
+  grid-column: 1;
+}
+.queue-area {
+  grid-row: 3;
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #111;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.queue-skip {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #2d2d2d;
+  color: #ccc;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.queue-skip:hover { background: #3a3a3a; }
+.queue-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex: 1;
+  padding-bottom: 2px;
+}
+.queue-item {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.queue-item img {
+  width: 120px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+  border: 1px solid #333;
+}
+.queue-num {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 .empty-player {
   height: 100%;
@@ -259,6 +371,8 @@ header {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  grid-row: 2 / 4;
+  grid-column: 2;
 }
 .participants h3 {
   font-size: 0.85rem;
