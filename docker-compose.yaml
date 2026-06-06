@@ -12,5 +12,7 @@ services:
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+    environment:
+      DOMAIN: ${DOMAIN}
     depends_on:
       - backend

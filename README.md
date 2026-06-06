@@ -21,14 +21,12 @@ Watch YouTube videos together in sync.
 **Backend**
 ```bash
 cd backend
-cp .env.example .env
 go run ./cmd/server
 ```
 
 **Frontend**
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
@@ -37,17 +35,26 @@ Open `http://localhost:5173`.
 
 ## Production deploy
 
-```bash
-cp .env.example .env
-# edit .env — set ALLOWED_ORIGIN=https://yourdomain.com
-```
+**1. Get a TLS certificate**
 
-Get a Let's Encrypt certificate:
 ```bash
 certbot certonly --standalone -d yourdomain.com
 ```
 
-Update `frontend/nginx.conf` — replace `YOURDOMAIN` with your domain.
+**2. Configure environment variables**
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```
+DOMAIN=yourdomain.com
+ALLOWED_ORIGIN=https://yourdomain.com
+```
+
+**3. Start**
 
 ```bash
 docker compose up -d --build
@@ -57,5 +64,6 @@ docker compose up -d --build
 
 | Variable         | Description                        | Example                      |
 |------------------|------------------------------------|------------------------------|
-| `PORT`           | Backend port                       | `8080`                       |
+| `DOMAIN`         | Your domain (used for TLS paths)   | `yourdomain.com`             |
 | `ALLOWED_ORIGIN` | Frontend origin for WebSocket CORS | `https://yourdomain.com`     |
+| `PORT`           | Backend port (default `8080`)      | `8080`                       |
