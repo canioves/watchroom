@@ -27,13 +27,27 @@
       />
     </div>
 
-    <aside class="participants">
-      <h3>Participants ({{ participants.length }})</h3>
-      <ul>
-        <li v-for="p in participants" :key="p.userId">
-          {{ p.userId === myId ? `${p.nickname} (you)` : p.nickname }}
-        </li>
-      </ul>
+    <aside class="sidebar">
+      <div class="participants">
+        <h3>Participants ({{ participants.length }})</h3>
+        <ul>
+          <li v-for="p in participants" :key="p.userId">
+            {{ p.userId === myId ? `${p.nickname} (you)` : p.nickname }}
+          </li>
+        </ul>
+      </div>
+      <div class="chat">
+        <div class="chat-messages" ref="chatEl">
+          <div v-for="m in messages" :key="m.id" class="chat-msg">
+            <span class="chat-nick">{{ m.nickname }}</span>
+            <span class="chat-text">{{ m.text }}</span>
+          </div>
+        </div>
+        <div class="chat-input">
+          <input v-model="chatInput" placeholder="Message..." @keydown.enter="submitChat" />
+          <button @click="submitChat">→</button>
+        </div>
+      </div>
     </aside>
 
     <div class="log">
@@ -43,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, useTemplateRef } from "vue";
+import { ref, nextTick, onMounted, onUnmounted, useTemplateRef } from "vue";
 import { useRoute } from "vue-router";
 import { useWebSocket } from "../composables/useWebSocket";
 import YoutubePlayer from "../components/YoutubePlayer.vue";
@@ -64,6 +78,10 @@ const startPosition = ref(0);
 const autoPlay = ref(false);
 
 const player = useTemplateRef("player");
+
+const messages = ref([]);
+const chatInput = ref("");
+const chatEl = useTemplateRef("chatEl");
 
 const copied = ref(false);
 function copyLink() {
@@ -95,9 +113,12 @@ const { status, connect, disconnect, send } = useWebSocket(
       participants.value = participants.value.filter((p) => p.userId !== data.userId);
       log.value.push(`[leave] ${data.nickname}`);
     } else if (data.type === "load") {
-      autoPlay.value = true
-      startPosition.value = 0
-      currentVideoId.value = data.videoId
+      autoPlay.value = true;
+      startPosition.value = 0;
+      currentVideoId.value = data.videoId;
+    } else if (data.type === "chat") {
+      messages.value.push({ id: Date.now(), nickname: data.nickname, text: data.text });
+      nextTick(() => { if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight; });
     } else if (["play", "pause", "seek"].includes(data.type)) {
       applyMessage(data);
     }
@@ -123,11 +144,20 @@ function parseVideoId(input) {
 function loadVideo() {
   const id = parseVideoId(videoInput.value);
   if (id) {
-    autoPlay.value = true
-    startPosition.value = 0
+    autoPlay.value = true;
+    startPosition.value = 0;
     currentVideoId.value = id;
     send({ type: "load", videoId: id });
   }
+}
+
+function submitChat() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  messages.value.push({ id: Date.now(), nickname, text });
+  nextTick(() => { if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight; });
+  send({ type: "chat", text });
+  chatInput.value = "";
 }
 
 onMounted(connect);
@@ -221,10 +251,14 @@ header {
   color: #555;
   font-size: 0.95rem;
 }
-.participants {
+.sidebar {
   background: #1a1a1a;
   border-radius: 8px;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 .participants h3 {
   font-size: 0.85rem;
@@ -237,6 +271,62 @@ header {
 .participants li {
   font-size: 0.9rem;
   padding: 4px 0;
+}
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 12px;
+  border-top: 1px solid #2d2d2d;
+  padding-top: 10px;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.chat-nick {
+  font-size: 0.7rem;
+  color: #888;
+}
+.chat-text {
+  font-size: 0.85rem;
+  color: #e0e0e0;
+  word-break: break-word;
+}
+.chat-input {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.chat-input input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.chat-input button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #e53e3e;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
 }
 .log {
   grid-column: 1 / -1;
@@ -275,8 +365,8 @@ header {
     aspect-ratio: 16 / 9;
     min-height: unset;
   }
-  .participants {
-    max-height: 100px;
+  .sidebar {
+    max-height: 260px;
   }
   .participants ul {
     display: flex;

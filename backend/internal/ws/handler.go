@@ -143,6 +143,8 @@ func (h *Handler) readPump(c *room.Client, rm *room.Room) {
 				IsPlaying: true,
 				UpdatedAt: time.Now().UnixMilli(),
 			})
+		case MessageChat:
+			msg.Nickname = c.Nickname
 		}
 
 		log.Printf("[msg] type=%s user=%s room=%s", msg.Type, c.Nickname, c.RoomID)

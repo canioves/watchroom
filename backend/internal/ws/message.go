@@ -10,6 +10,7 @@ const (
 	StateSync   MessageType = "sync"
 	UserJoin    MessageType = "join"
 	UserLeave   MessageType = "leave"
+	MessageChat MessageType = "chat"
 )
 
 type Message struct {
@@ -20,4 +21,5 @@ type Message struct {
 	UserID    string      `json:"userId,omitempty"`
 	Nickname  string      `json:"nickname,omitempty"`
 	IsPlaying bool        `json:"isPlaying,omitempty"`
+	Text      string      `json:"text,omitempty"`
 }
